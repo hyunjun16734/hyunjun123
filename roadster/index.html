@@ -194,7 +194,7 @@
 </style>
 </head>
 <body>
-<div id="game" data-state="menu">
+<div id="game" data-state="play">
   <canvas id="cv"></canvas>
   <div id="touch" aria-hidden="true"></div>
 
@@ -218,7 +218,7 @@
 
   <div id="toast"></div>
 
-  <section class="screen" id="menu">
+  <section class="screen" id="menu" hidden>
     <div class="card start">
       <div class="col">
         <p class="eyebrow">Tesla Roadster · 팬메이드 아케이드</p>
@@ -442,7 +442,7 @@ let battery = 100, distance = 0, time = 0;
 let boosting = false, braking = false, offroad = false;
 let invuln = 0, shake = 0, flashRed = 0, flashVolt = 0;
 let skyOffset = 0, hillOffset = 0;
-let lastSegIdx = 0, launchT = 0, launchDone = true, lowWarned = false;
+let lastSegIdx = 0, launchT = 0, launchDone = true, lowWarned = false, countdown = 0;
 let charges = 0, crashes = 0, topKmh = 0, best = 0;
 let aiTimer = 0, aiTarget = 0;
 const particles = [];
@@ -871,6 +871,7 @@ function startGame() {
   invuln = 0; shake = 0; flashRed = flashVolt = 0;
   charges = 0; crashes = 0; topKmh = 0; lowWarned = false;
   launchT = 0; launchDone = false;
+  countdown = 3; toast('3');
   const pz = increase(position, PLAYER_Z, trackLen);
   for (const car of cars.slice()) {
     const dz = (car.z - pz + trackLen) % trackLen;
@@ -937,6 +938,16 @@ function update(dt) {
   const pz0 = increase(position, PLAYER_Z, trackLen), pSeg = findSegment(pz0);
   const playing = state === 'play';
   const sp = speed / MAX_SPEED;
+
+  if (playing && countdown > 0) {
+    const before = Math.ceil(countdown);
+    countdown -= dt;
+    const after = Math.ceil(countdown);
+    if (after !== before) toast(after > 0 ? String(after) : '출발!', after > 0 ? '' : 'volt');
+    boosting = false; braking = true; speed = 0;
+    updateCars(dt);
+    return;
+  }
 
   let steer = 0, boostIn = false;
   if (playing) { steer = (inLeft() ? -1 : 0) + (inRight() ? 1 : 0); boostIn = inBoost(); }
@@ -1100,6 +1111,13 @@ resize();
 setSound(soundOn);
 $('bestMenu').textContent = best.toFixed(1) + ' km';
 for (let i = 0; i < 30; i++) update(STEP);
+startGame();
+const unlock = () => {
+  initAudio(); if (state === 'play' && !wakeLock) requestWake();
+  window.removeEventListener('pointerdown', unlock, true); window.removeEventListener('keydown', unlock, true);
+};
+window.addEventListener('pointerdown', unlock, true);
+window.addEventListener('keydown', unlock, true);
 
 let lastT = performance.now(), acc = 0;
 function frame(now) {
