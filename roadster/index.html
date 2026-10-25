@@ -185,6 +185,11 @@
   .stats dd { margin: 0; font-family: var(--f-num); font-weight: 700; font-variant-numeric: tabular-nums; }
   .pill { justify-self: start; font-size: 12px; font-weight: 600; color: #1a2233; background: var(--gold); padding: 3px 10px; border-radius: 999px; }
   .stack { display: grid; gap: 10px; }
+  .label { margin: 0 0 -4px; font-size: 12px; font-weight: 600; color: var(--muted); }
+  .cars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .cars button { min-height: 58px; padding: 6px 2px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, .05); display: grid; place-items: center; align-content: center; gap: 5px; font-size: 11px; font-weight: 700; line-height: 1.2; }
+  .cars i { width: 18px; height: 18px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 2px var(--r, rgba(255, 255, 255, .4)); }
+  .cars button[aria-pressed="true"] { border-color: var(--ink); background: rgba(255, 255, 255, .16); }
   .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: rgba(255, 255, 255, .06); border: 1px solid var(--line); }
   .seg button { height: 40px; border: 0; border-radius: 10px; background: transparent; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; }
   .seg button svg { width: 16px; height: 16px; fill: currentColor; }
@@ -264,6 +269,8 @@
           <li><span class="chip gold">플립</span>공중에서 누르면 공중제비 +300점. 착지 전에 끝내야 해요.</li>
           <li><span class="chip red">♥ ×3</span>세 번 부딪히면 끝나요.</li>
         </ul>
+        <p class="label">차 스타일</p>
+        <div class="cars" role="group" aria-label="차 스타일"><button data-car="silver" aria-pressed="true"><i style="--c:#e9ecf0"></i>실버</button><button data-car="red" aria-pressed="false"><i style="--c:#c8102e;--r:#c3c8cf"></i>레드</button><button data-car="black" aria-pressed="false"><i style="--c:#1d1e22;--r:#6fe3ff"></i>매트 블랙</button><button data-car="starman" aria-pressed="false"><i style="--c:#b3101e;--r:#f2f3f5"></i>스타맨</button></div>
         <div class="seg" role="group" aria-label="시간대"><button data-mode="day" aria-pressed="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M11 1h2v4h-2zM11 19h2v4h-2zM1 11h4v2H1zM19 11h4v2h-4zM4.2 5.6l1.4-1.4 2.8 2.8-1.4 1.4zM15.6 17l1.4-1.4 2.8 2.8-1.4 1.4zM4.2 18.4 7 15.6 8.4 17l-2.8 2.8zM15.6 7 18.4 4.2l1.4 1.4L17 8.4z"/></svg>낮 고속도로</button><button data-mode="night" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z"/></svg>밤 고속도로</button></div>
         <div class="row">
           <button class="btn primary" id="startBtn">출발</button>
@@ -280,6 +287,8 @@
       <h2>일시정지</h2>
       <div class="stack">
         <button class="btn primary" id="resumeBtn">계속 달리기</button>
+        <p class="label">차 스타일</p>
+        <div class="cars" role="group" aria-label="차 스타일"><button data-car="silver" aria-pressed="true"><i style="--c:#e9ecf0"></i>실버</button><button data-car="red" aria-pressed="false"><i style="--c:#c8102e;--r:#c3c8cf"></i>레드</button><button data-car="black" aria-pressed="false"><i style="--c:#1d1e22;--r:#6fe3ff"></i>매트 블랙</button><button data-car="starman" aria-pressed="false"><i style="--c:#b3101e;--r:#f2f3f5"></i>스타맨</button></div>
         <div class="seg" role="group" aria-label="시간대"><button data-mode="day" aria-pressed="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M11 1h2v4h-2zM11 19h2v4h-2zM1 11h4v2H1zM19 11h4v2h-4zM4.2 5.6l1.4-1.4 2.8 2.8-1.4 1.4zM15.6 17l1.4-1.4 2.8 2.8-1.4 1.4zM4.2 18.4 7 15.6 8.4 17l-2.8 2.8zM15.6 7 18.4 4.2l1.4 1.4L17 8.4z"/></svg>낮 고속도로</button><button data-mode="night" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z"/></svg>밤 고속도로</button></div>
         <div class="row" style="grid-template-columns:1fr 1fr">
           <button class="btn" id="quitBtn">처음 화면</button>
@@ -640,36 +649,75 @@ const ROADSTER_BODY = extrude(shape([
 const ROADSTER_CANOPY = extrude(shape([
   [-0.62, 0.77], [0.05, 1.17], [0.78, 1.19], [1.8, 0.85],
 ]), 1.24, 0.09, 3);
-const paintMat = new THREE.MeshStandardMaterial({ color: 0xe9ecf0, metalness: 0.2, roughness: 0.26 });
-const coverMat = new THREE.MeshStandardMaterial({ color: 0xf4f5f7, metalness: 0.1, roughness: 0.3 });
 const ventMat = new THREE.MeshBasicMaterial({ color: 0x8ff0ff, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, side: THREE.DoubleSide });
 const jetMat = new THREE.MeshBasicMaterial({ color: 0x5fd4ff, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
 const jetCoreMat = new THREE.MeshBasicMaterial({ color: 0xe8fdff, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
 const tireGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.3, 24).rotateZ(Math.PI / 2);
 const coverGeo = new THREE.CircleGeometry(0.29, 24);
+const rimGeo = new THREE.RingGeometry(0.2, 0.29, 24);
 const ventGeo = new THREE.CircleGeometry(0.2, 18).rotateX(Math.PI / 2);
 const jetGeo = new THREE.ConeGeometry(1, 1, 14, 1, true).rotateX(Math.PI).translate(0, -0.5, 0);
+const mirrorGeo = new THREE.BoxGeometry(0.2, 0.09, 0.14);
+const whiteSuitMat = new THREE.MeshStandardMaterial({ color: 0xf2f3f5, roughness: 0.55 });
+const visorMat = new THREE.MeshStandardMaterial({ color: 0x2a2416, metalness: 0.8, roughness: 0.15 });
 
+// paint jobs: the 2026 reveal car, the 2017 prototype red, a stealth matte black, and the car SpaceX sent to space
+const STYLES = {
+  silver: { paint: 0xe9ecf0, metal: 0.2, rough: 0.26, cover: 0xf4f5f7, glass: 0x1b2330, front: 0xffffff, rear: 0xff2a3c },
+  red: { paint: 0xc8102e, metal: 0.35, rough: 0.2, cover: 0x26282d, rim: 0xc3c8cf, glass: 0x12161e, front: 0xffffff, rear: 0xff2a3c, roof: 0x101114, ducktail: true },
+  black: { paint: 0x1d1e22, metal: 0.1, rough: 0.78, cover: 0x121316, rim: 0x6fe3ff, glass: 0x0b0d12, front: 0x9ff0ff, rear: 0xff2a3c, accent: 0x6fe3ff, wing: true },
+  starman: { paint: 0xb3101e, metal: 0.4, rough: 0.18, cover: 0xa7adb6, glass: 0x9fb6c8, front: 0xfff4d6, rear: 0xff2a3c, open: true },
+};
 const playerTailGlow = new THREE.SpriteMaterial({ map: GLOW, color: 0xff3048, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.55 });
 const playerHeadGlow = new THREE.SpriteMaterial({ map: GLOW, color: 0xffffff, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.7 });
-function buildRoadster() {
+function buildRoadster(key) {
+  const st = STYLES[key] || STYLES.silver;
+  const paint = new THREE.MeshStandardMaterial({ color: st.paint, metalness: st.metal, roughness: st.rough });
+  const glass = new THREE.MeshStandardMaterial({ color: st.glass, metalness: 0.4, roughness: 0.1, transparent: !!st.open, opacity: st.open ? 0.45 : 1 });
+  const cover = new THREE.MeshStandardMaterial({ color: st.cover, metalness: 0.3, roughness: 0.35 });
+  const frontMat = new THREE.MeshBasicMaterial({ color: st.front }), rearMat = new THREE.MeshBasicMaterial({ color: st.rear });
+  playerHeadGlow.color.setHex(st.front);
   const g = new THREE.Group(), body = new THREE.Group();
   g.add(body);
-  add(body, ROADSTER_BODY, paintMat);
-  add(body, ROADSTER_CANOPY, glassMat);
+  add(body, ROADSTER_BODY, paint);
   add(body, new THREE.BoxGeometry(2.0, 0.12, 4.1), blackMat, 0, 0.3, 0);
-  add(body, new THREE.BoxGeometry(1.86, 0.035, 0.05), whiteLightMat, 0, 0.47, -2.33);
-  add(body, new THREE.BoxGeometry(1.92, 0.05, 0.05), tailMat, 0, 0.62, 2.31);
+  add(body, new THREE.BoxGeometry(1.86, 0.035, 0.05), frontMat, 0, 0.47, -2.33);
+  add(body, new THREE.BoxGeometry(1.92, 0.05, 0.05), rearMat, 0, 0.62, 2.31);
   add(body, new THREE.BoxGeometry(1.3, 0.16, 0.3), blackMat, 0, 0.36, 2.18);
-  const tailGlow = playerTailGlow;
-  for (const sx of [-0.7, 0, 0.7]) { const s = new THREE.Sprite(tailGlow); s.scale.set(1.1, 0.4, 1); s.position.set(sx, 0.62, 2.38); body.add(s); }
-  const headGlow = playerHeadGlow;
-  for (const sx of [-0.7, 0, 0.7]) { const s = new THREE.Sprite(headGlow); s.scale.set(1.2, 0.35, 1); s.position.set(sx, 0.47, -2.4); body.add(s); }
+  for (const sx of [-1, 1]) add(body, mirrorGeo, paint, sx * 1.04, 0.93, -0.5);
+  if (st.open) {
+    // open-top cockpit with Starman at the wheel
+    const ws = add(body, new THREE.BoxGeometry(1.5, 0.36, 0.04), glass, 0, 1.0, -0.6); ws.rotation.x = -0.55;
+    add(body, new THREE.BoxGeometry(1.56, 0.1, 1.9), blackMat, 0, 0.88, 0.3);
+    for (const sx of [-0.4, 0.4]) add(body, new THREE.BoxGeometry(0.5, 0.48, 0.14), blackMat, sx, 1.14, 0.95);
+    add(body, new THREE.CylinderGeometry(0.19, 0.23, 0.5, 12), whiteSuitMat, -0.4, 1.16, 0.62);
+    add(body, new THREE.SphereGeometry(0.2, 16, 12), whiteSuitMat, -0.4, 1.52, 0.56);
+    add(body, new THREE.SphereGeometry(0.15, 14, 10), visorMat, -0.4, 1.52, 0.44);
+    const arm = add(body, new THREE.CylinderGeometry(0.06, 0.06, 0.5, 8), whiteSuitMat, -0.72, 1.12, 0.45); arm.rotation.set(0.5, 0, 0.75);
+  } else {
+    add(body, ROADSTER_CANOPY, glass);
+    if (st.roof) add(body, new THREE.BoxGeometry(1.0, 0.04, 0.7), new THREE.MeshStandardMaterial({ color: st.roof, roughness: 0.4 }), 0, 1.245, 0.2);
+  }
+  if (st.ducktail) { const d = add(body, new THREE.BoxGeometry(1.84, 0.05, 0.3), paint, 0, 0.9, 2.05); d.rotation.x = -0.28; }
+  if (st.wing) {
+    for (const sx of [-0.6, 0.6]) add(body, new THREE.BoxGeometry(0.06, 0.26, 0.12), blackMat, sx, 0.99, 1.95);
+    add(body, new THREE.BoxGeometry(1.95, 0.05, 0.4), blackMat, 0, 1.13, 1.98);
+    add(body, new THREE.BoxGeometry(1.95, 0.02, 0.02), new THREE.MeshBasicMaterial({ color: st.accent }), 0, 1.16, 2.18);
+  }
+  if (st.accent) {
+    const am = new THREE.MeshBasicMaterial({ color: st.accent });
+    for (const sx of [-1.01, 1.01]) add(body, new THREE.BoxGeometry(0.03, 0.03, 3.4), am, sx, 0.4, 0);
+    const ug = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW, color: st.accent, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.45 }));
+    ug.scale.set(4.4, 1.2, 1); ug.position.set(0, 0.05, 0); body.add(ug);
+  }
+  for (const sx of [-0.7, 0, 0.7]) { const s = new THREE.Sprite(playerTailGlow); s.scale.set(1.1, 0.4, 1); s.position.set(sx, 0.62, 2.38); body.add(s); }
+  for (const sx of [-0.7, 0, 0.7]) { const s = new THREE.Sprite(playerHeadGlow); s.scale.set(1.2, 0.35, 1); s.position.set(sx, 0.47, -2.4); body.add(s); }
   const wheels = [];
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
     const w = new THREE.Group(); w.position.set(sx * 0.9, 0.36, sz * 1.38); body.add(w);
     add(w, tireGeo, blackMat);
-    const cov = add(w, coverGeo, coverMat, sx * 0.152, 0, 0); cov.rotation.y = sx * Math.PI / 2;
+    const cov = add(w, coverGeo, cover, sx * 0.152, 0, 0); cov.rotation.y = sx * Math.PI / 2;
+    if (st.rim) { const rim = add(w, rimGeo, new THREE.MeshBasicMaterial({ color: st.rim, side: THREE.DoubleSide }), sx * 0.156, 0, 0); rim.rotation.y = sx * Math.PI / 2; }
     wheels.push(w);
   }
   const jets = [], vents = [];
@@ -767,8 +815,22 @@ const ringGeo = new THREE.TorusGeometry(1.7, 0.13, 10, 44);
 const ringGlowGeo = new THREE.TorusGeometry(1.7, 0.42, 8, 40);
 
 // ---------- player ----------
-const player = buildRoadster();
+let carKey = 'silver';
+try { const k = localStorage.getItem('roadster-car'); if (STYLES[k]) carKey = k; } catch (e) {}
+let player = buildRoadster(carKey);
 scene.add(player.group);
+function setCar(key) {
+  if (!STYLES[key]) return;
+  carKey = key;
+  const old = player;
+  player = buildRoadster(key);
+  player.group.position.copy(old.group.position); player.group.rotation.copy(old.group.rotation);
+  player.body.rotation.copy(old.body.rotation); player.group.visible = old.group.visible;
+  scene.remove(old.group); scene.add(player.group);
+  document.querySelectorAll('.cars button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.car === key)));
+  needsRender = true;
+  try { localStorage.setItem('roadster-car', key); } catch (e) {}
+}
 const playerShadow = new THREE.Mesh(blobGeo, new THREE.MeshBasicMaterial({ map: BLOB, transparent: true, depthWrite: false }));
 playerShadow.scale.set(3, 1, 5.6); playerShadow.position.y = 0.05; scene.add(playerShadow);
 const headSpot = new THREE.SpotLight(0xfff1d6, 0, 80, 0.5, 0.55, 1);
@@ -1474,16 +1536,19 @@ $('pauseBtn').addEventListener('click', () => { if (state === 'play') pauseGame(
 $('soundBtn').addEventListener('click', () => setSound(!soundOn));
 $('soundBtn2').addEventListener('click', () => setSound(!soundOn));
 document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => applyTheme(b.dataset.mode === 'night')));
+document.querySelectorAll('.cars button').forEach(b => b.addEventListener('click', () => setCar(b.dataset.car)));
 
 // ---------- boot ----------
 resize();
 setSound(soundOn);
 $('bestMenu').textContent = fmt(best);
 const hashMode = () => /night/i.test(location.hash) ? true : /day/i.test(location.hash) ? false : null;
+const hashCar = () => { const m = /silver|red|black|starman/i.exec(location.hash); return m ? m[0].toLowerCase() : null; };
+setCar(hashCar() || carKey);
 let startNight = hashMode();
 if (startNight === null) { try { startNight = localStorage.getItem('roadster-hwy-theme') === 'night'; } catch (e) { startNight = false; } }
 applyTheme(startNight);
-window.addEventListener('hashchange', () => { const m = hashMode(); if (m !== null) applyTheme(m); });
+window.addEventListener('hashchange', () => { const m = hashMode(); if (m !== null) applyTheme(m); const c = hashCar(); if (c) setCar(c); });
 updateTrees(0);
 for (let i = 0; i < 6; i++) spawnOpposite();
 opp.forEach((o, i) => { o.g.position.z = -60 - i * 60; });
