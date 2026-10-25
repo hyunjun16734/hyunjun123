@@ -86,8 +86,9 @@
     pointer-events: none; transition: opacity .3s;
   }
   .hint {
-    margin: 0 0 8px; padding: 8px 14px; border-radius: 14px; font-size: 13px; font-weight: 600; line-height: 1.45;
-    background: var(--glass); border: 1px solid var(--line); transition: opacity .6s; max-width: 60%;
+    position: absolute; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 150px); transform: translateX(-50%); pointer-events: none;
+    margin: 0; padding: 8px 14px; border-radius: 14px; font-size: 13px; font-weight: 600; line-height: 1.45; text-align: center;
+    background: var(--glass); border: 1px solid var(--line); transition: opacity .6s; width: max-content; max-width: 86%;
   }
   .hint.fade { opacity: 0; }
   .hint .desk { display: none; }
@@ -104,6 +105,14 @@
   .thrust { width: 90px; height: 90px; border-color: rgba(111, 227, 255, .55); }
   .thrust svg { width: 28px; height: 28px; fill: var(--volt); }
   .thrust.on { background: rgba(111, 227, 255, .38); border-color: var(--volt); transform: scale(.94); }
+  .boost {
+    --p: 1; width: 80px; height: 80px; flex: none; border-color: rgba(255, 150, 70, .6);
+    background: conic-gradient(rgba(255, 140, 60, .5) calc(var(--p) * 360deg), var(--glass) 0);
+  }
+  .boost svg { width: 26px; height: 26px; fill: #ffb15c; }
+  .boost.ready { box-shadow: 0 0 0 2px rgba(255, 150, 70, .85), 0 0 18px rgba(255, 140, 60, .45); }
+  .boost.active { background: rgba(255, 140, 60, .6); transform: scale(.94); }
+  .boost:not(.ready):not(.active) svg, .boost:not(.ready):not(.active) span { opacity: .6; }
   .flip { width: 62px; height: 62px; opacity: .45; }
   .flip svg { width: 22px; height: 22px; fill: none; stroke: var(--gold); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
   .flip.ready { opacity: 1; border-color: rgba(255, 207, 77, .7); }
@@ -112,6 +121,7 @@
   #game[data-state="menu"] .hud, #game[data-state="menu"] .controls, #game[data-state="menu"] .alt,
   #game[data-state="over"] .controls, #game[data-state="over"] .alt { opacity: 0; pointer-events: none; }
   #game[data-state="menu"] .controls *, #game[data-state="over"] .controls * { pointer-events: none; }
+  #game[data-state="menu"] .hint, #game[data-state="over"] .hint, #game[data-state="paused"] .hint { opacity: 0; }
 
   /* Toasts */
   #toast, #toast2 {
@@ -123,6 +133,7 @@
   .volt { color: var(--volt) !important; }
   .red { color: #ff6a7c !important; }
   .gold { color: var(--gold) !important; }
+  .orange { color: #ffb15c !important; }
   .show { animation: pop 1.2s ease-out forwards; }
   .big-count { font-size: 64px !important; top: 30% !important; }
   @keyframes pop {
@@ -170,6 +181,7 @@
   .chip { justify-self: start; font-family: var(--f-num); font-weight: 700; font-size: 12px; padding: 3px 8px; border-radius: 7px; background: rgba(255, 255, 255, .1); border: 1px solid var(--line); white-space: nowrap; }
   .chip.volt { border-color: rgba(111, 227, 255, .45); }
   .chip.gold { border-color: rgba(255, 207, 77, .5); }
+  .chip.orange { border-color: rgba(255, 150, 70, .55); }
   .chip.red { border-color: rgba(227, 25, 55, .55); }
   .row { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
   .btn { height: 54px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255, 255, 255, .06); padding: 0 16px; font-weight: 600; }
@@ -238,8 +250,10 @@
 
   <div class="alt" aria-hidden="true"><span>ALT</span><div class="tick"></div><i id="altMark"></i><b id="altTxt">0.0 m</b></div>
 
+  <p class="hint" id="hint"><span class="mob">좌우로 드래그해서 차선 이동<br>스러스터로 날고, 부스터로 가속해요</span><span class="desk">← → 차선 이동 · Space 날기 · Shift 부스터 · F 플립</span></p>
+
   <div class="controls">
-    <p class="hint" id="hint"><span class="mob">좌우로 드래그해서 차선 이동<br>스러스터를 누르고 있으면 날아요</span><span class="desk">← → 차선 이동 · Space 날기 · F 플립</span></p>
+    <button class="round boost ready" id="boostBtn" aria-label="부스터"><svg viewBox="0 0 24 24"><path d="M13.5 2 4 13.5h6.2L9 22l10-12.2h-6.4z"/></svg><span>부스터</span></button>
     <div class="btns">
       <button class="round flip" id="flipBtn" aria-label="플립"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg><span>플립</span></button>
       <button class="round thrust" id="thrustBtn" aria-label="스러스터"><svg viewBox="0 0 24 24"><path d="M12 3 4.5 13h5v8h5v-8h5z"/></svg><span>스러스터</span></button>
@@ -266,6 +280,7 @@
         <ul class="howto">
           <li><span class="chip">드래그</span>화면을 좌우로 끌면 차선을 옮깁니다.</li>
           <li><span class="chip volt">스러스터</span>누르고 있으면 떠오르고, 떼면 내려와요.</li>
+          <li><span class="chip orange">부스터</span>누르면 3초 동안 1.5배 빨라지고 점수 2배. 링·플립을 하면 더 빨리 다시 차요.</li>
           <li><span class="chip gold">플립</span>공중에서 누르면 공중제비 +300점. 착지 전에 끝내야 해요.</li>
           <li><span class="chip red">♥ ×3</span>세 번 부딪히면 끝나요.</li>
         </ul>
@@ -649,6 +664,11 @@ const ROADSTER_BODY = extrude(shape([
 const ROADSTER_CANOPY = extrude(shape([
   [-0.62, 0.77], [0.05, 1.17], [0.78, 1.19], [1.8, 0.85],
 ]), 1.24, 0.09, 3);
+const boostMat = new THREE.MeshBasicMaterial({ color: 0xff7a2e, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+const boostCoreMat = new THREE.MeshBasicMaterial({ color: 0xfff0c8, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+const boostGeo = new THREE.ConeGeometry(1, 1, 14, 1, true).translate(0, 0.5, 0).rotateX(Math.PI / 2);
+const nozzleGeo = new THREE.CylinderGeometry(0.12, 0.15, 0.16, 16, 1, true).rotateX(Math.PI / 2);
+const nozzleMat = new THREE.MeshStandardMaterial({ color: 0x8a9099, metalness: 0.6, roughness: 0.35, side: THREE.DoubleSide });
 const ventMat = new THREE.MeshBasicMaterial({ color: 0x8ff0ff, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, side: THREE.DoubleSide });
 const jetMat = new THREE.MeshBasicMaterial({ color: 0x5fd4ff, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
 const jetCoreMat = new THREE.MeshBasicMaterial({ color: 0xe8fdff, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
@@ -727,8 +747,15 @@ function buildRoadster(key) {
     const j2 = add(body, jetGeo, jetCoreMat, sx * 0.55, 0.2, sz * 0.95);
     jets.push(j1, j2);
   }
+  const boosters = [], boostPorts = [];
+  for (const sx of [-0.45, 0.45]) {
+    add(body, nozzleGeo, nozzleMat, sx, 0.42, 2.38);
+    const b1 = add(body, boostGeo, boostMat, sx, 0.42, 2.44), b2 = add(body, boostGeo, boostCoreMat, sx, 0.42, 2.44);
+    b1.visible = b2.visible = false;
+    boosters.push(b1, b2); boostPorts.push(b2);
+  }
   g.rotation.order = 'YXZ'; body.rotation.order = 'XYZ';
-  return { group: g, body, wheels, jets, vents };
+  return { group: g, body, wheels, jets, vents, boosters, boostPorts };
 }
 
 // ---------- traffic ----------
@@ -929,6 +956,8 @@ let state = 'play';
 let speed = 0, slow = 1, launchT = 0, launched = false;
 let px = LANES[2], py = 0, vy = 0, tx = LANES[2], vx = 0, bank = 0, pitch = 0, yaw = 0, wheelSpin = 0;
 let thrust = 0, flipT = -1, flipsThisJump = 0, airT = 0;
+const BOOST_DUR = 3, BOOST_CD = 6;
+let boostT = 0, boostCD = 0, boostAmt = 0;
 let score = 0, dist = 0, lives = 3, invuln = 0, combo = 0, rings = 0, nears = 0, flips = 0, topKmh = 0, best = 0;
 let countdown = 0, introT = 0, distToRow = 0, distToStruct = 0, nextStruct = 300, oppT = 0, time = 0, shake = 0, dieT = 0, hintT = 0;
 let closedLane = -1, closedUntil = 0, warnedFor = null;
@@ -1047,7 +1076,8 @@ const dragEnd = e => { if (e.pointerId === dragId) dragId = null; };
 touch.addEventListener('pointerup', dragEnd); touch.addEventListener('pointercancel', dragEnd); touch.addEventListener('lostpointercapture', dragEnd);
 game.addEventListener('contextmenu', e => e.preventDefault());
 
-const thrustBtn = $('thrustBtn'), flipBtn = $('flipBtn');
+const thrustBtn = $('thrustBtn'), flipBtn = $('flipBtn'), boostBtn = $('boostBtn');
+boostBtn.addEventListener('pointerdown', e => { e.preventDefault(); tryBoost(); });
 thrustBtn.addEventListener('pointerdown', e => { e.preventDefault(); holdThrust.add(e.pointerId); try { thrustBtn.setPointerCapture(e.pointerId); } catch (err) {} });
 const thrustUp = e => holdThrust.delete(e.pointerId);
 thrustBtn.addEventListener('pointerup', thrustUp); thrustBtn.addEventListener('pointercancel', thrustUp); thrustBtn.addEventListener('lostpointercapture', thrustUp);
@@ -1057,11 +1087,12 @@ flipBtn.addEventListener('pointerup', flipUp); flipBtn.addEventListener('pointer
 const inThrust = () => keys.up || holdThrust.size > 0;
 function clearInput() { holdThrust.clear(); dragId = null; keys.l = keys.r = keys.up = false; }
 
-const KEYMAP = { ArrowLeft: 'l', a: 'l', A: 'l', ArrowRight: 'r', d: 'r', D: 'r', ArrowUp: 'up', w: 'up', W: 'up', ' ': 'up', Shift: 'up' };
+const KEYMAP = { ArrowLeft: 'l', a: 'l', A: 'l', ArrowRight: 'r', d: 'r', D: 'r', ArrowUp: 'up', w: 'up', W: 'up', ' ': 'up' };
 window.addEventListener('keydown', e => {
   const k = KEYMAP[e.key];
   if (k) { keys[k] = true; if (state === 'play') e.preventDefault(); return; }
   if (e.key === 'f' || e.key === 'F' || e.key === 'x' || e.key === 'X' || e.key === 'ArrowDown') { if (!e.repeat) tryFlip(); }
+  else if (e.key === 'Shift' || e.key === 'b' || e.key === 'B' || e.key === 'e' || e.key === 'E') { if (!e.repeat) tryBoost(); }
   else if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') { if (state === 'play') pauseGame(); else if (state === 'paused') resumeGame(); }
   else if (e.key === 'Enter') { if (state === 'menu' || state === 'over') startGame(); else if (state === 'paused') resumeGame(); }
 });
@@ -1104,7 +1135,7 @@ function updateAudio() {
   eng.o2.frequency.setTargetAtTime(120 + sp * 700, t, 0.08);
   eng.g.gain.setTargetAtTime(on ? 0.008 + sp * 0.02 : 0, t, 0.1);
   eng.road.gg.gain.setTargetAtTime(on && py < 0.05 ? 0.02 + sp * 0.03 : 0.004, t, 0.1);
-  eng.jet.gg.gain.setTargetAtTime(on ? thrust * 0.07 : 0, t, 0.06);
+  eng.jet.gg.gain.setTargetAtTime(on ? thrust * 0.07 + boostAmt * 0.06 : 0, t, 0.06);
   eng.jet.fl.frequency.setTargetAtTime(600 + thrust * 900 + sp * 400, t, 0.1);
 }
 function tone(f0, f1, dur, vol, type) {
@@ -1123,6 +1154,8 @@ function sfx(kind, n) {
   if (!eng || !soundOn) return;
   if (kind === 'ring') { const b = 520 * Math.pow(1.122, Math.min(n, 8)); tone(b, b * 2, 0.32, 0.1); }
   else if (kind === 'near') tone(1800, 600, 0.18, 0.05, 'triangle');
+  else if (kind === 'boost') { noise(0.9, 1600, 0.25); tone(180, 720, 0.7, 0.07, 'sawtooth'); }
+  else if (kind === 'ready') tone(660, 990, 0.18, 0.05);
   else if (kind === 'flip') { tone(400, 1200, 0.35, 0.06, 'triangle'); }
   else if (kind === 'flipok') { tone(880, 1760, 0.25, 0.08); setTimeout(() => tone(1320, 2640, 0.25, 0.07), 90); }
   else if (kind === 'land') noise(0.25, 300, 0.25);
@@ -1167,6 +1200,7 @@ function startGame() {
   initAudio(); requestWake(); clearInput(); clearObjs();
   score = 0; dist = 0; lives = 3; invuln = 0; combo = 0; rings = 0; nears = 0; flips = 0; topKmh = 0;
   slow = 1; shake = 0; thrust = 0; speed = 0; launched = false; launchT = 0;
+  boostT = 0; boostCD = 0; boostAmt = 0;
   closedLane = -1; warnedFor = null;
   resetCar();
   countdown = 3; introT = 0; distToRow = -60; distToStruct = 0; nextStruct = R(260, 360);
@@ -1194,6 +1228,12 @@ function gameOver() {
   $('bestMenu').textContent = fmt(best);
   setState('over');
 }
+function tryBoost() {
+  if (state !== 'play' || countdown > 0 || boostT > 0 || boostCD > 0) return;
+  boostT = BOOST_DUR; shake = Math.max(shake, 0.35);
+  toast2('부스터!', 'orange'); sfx('boost');
+}
+const refillBoost = s => { if (boostT <= 0 && boostCD > 0) { boostCD = Math.max(0, boostCD - s); if (boostCD === 0) sfx('ready'); } };
 function tryFlip() {
   if (state !== 'play' || countdown > 0 || flipT >= 0 || py < 1.6) return;
   flipT = 0; sfx('flip');
@@ -1201,6 +1241,7 @@ function tryFlip() {
 
 function crash(msg) {
   lives--; invuln = 1.8; shake = 1; slow = 0.4; combo = 0;
+  if (boostT > 0) { boostT = 0; boostCD = BOOST_CD; }
   if (flipT >= 0) { flipT = -1; player.body.rotation.x = 0; }
   updateLives(); sfx('crash');
   for (let i = 0; i < 40; i++) emit(sparks, px, py + 0.6, -2, R(-8, 8), R(-2, 8), R(-4, 10), R(0.4, 0.8), 1, R(0.45, 0.75), 0.2);
@@ -1288,7 +1329,7 @@ function update(dt) {
     if (flipT >= 1) {
       flipT = -1; player.body.rotation.x = 0; flips++; flipsThisJump++;
       const pts = 300 * flipsThisJump; score += pts;
-      toast((flipsThisJump > 1 ? flipsThisJump + '연속 ' : '') + '플립! +' + pts, 'gold'); sfx('flipok');
+      toast((flipsThisJump > 1 ? flipsThisJump + '연속 ' : '') + '플립! +' + pts, 'gold'); sfx('flipok'); refillBoost(1.5);
     } else player.body.rotation.x = -TAU * ease(flipT);
   }
 
@@ -1310,7 +1351,12 @@ function update(dt) {
   // ----- speed -----
   const d = difficulty();
   let target;
-  if (live) target = 42 + 34 * d;
+  if (live) {
+    if (boostT > 0) { boostT -= dt; if (boostT <= 0) { boostT = 0; boostCD = BOOST_CD; } }
+    else if (boostCD > 0) { boostCD -= dt; if (boostCD <= 0) { boostCD = 0; sfx('ready'); } }
+  }
+  boostAmt = damp(boostAmt, live && boostT > 0 ? 1 : 0, 5, dt);
+  if (live) target = (42 + 34 * d) * (1 + 0.5 * boostAmt);
   else if (state === 'dying') target = 6;
   else if (state === 'over') target = 0;
   else if (state === 'menu') target = 26;
@@ -1320,7 +1366,7 @@ function update(dt) {
     launchT += dt;
     speed += 30 * dt;
     if (speed * 3.6 >= 100) { launched = true; toast('0→100 km/h ' + launchT.toFixed(2) + '초', 'volt'); }
-  } else speed = damp(speed, target * slow, state === 'dying' ? 1.5 : 0.9, dt);
+  } else speed = damp(speed, target * slow, state === 'dying' ? 1.5 : boostT > 0 ? 2.6 : 0.9, dt);
   speed = Math.max(0, speed);
   const travel = speed * dt;
   if (live) topKmh = Math.max(topKmh, Math.round(speed * 3.6));
@@ -1328,7 +1374,7 @@ function update(dt) {
   // ----- spawning -----
   if (live) {
     dist += travel;
-    score += travel * 0.5;
+    score += travel * 0.5 * (1 + boostAmt);
     distToRow += travel; distToStruct += travel;
     const gap = lerp(62, 34, d);
     if (distToRow >= gap) {
@@ -1381,7 +1427,7 @@ function update(dt) {
       if (!o.got && prevZ < 0 && z >= 0 && live) {
         const dd = Math.hypot(o.mesh.position.x - px, o.mesh.position.y - (py + 0.6));
         if (dd < 1.6) {
-          o.got = true; combo++; rings++;
+          o.got = true; combo++; rings++; refillBoost(1);
           const pts = 200 * Math.min(combo, 5);
           score += pts;
           toast('+' + pts + (combo > 1 ? '  ×' + Math.min(combo, 5) : ''), 'gold'); sfx('ring', combo);
@@ -1397,7 +1443,7 @@ function update(dt) {
         const gap = passedGap(o);
         if (gap >= 0) {
           o.passed = true;
-          if (gap < 1.2) { nears++; score += 100; toast2('아슬아슬! +100', 'volt'); sfx('near'); }
+          if (gap < 1.2) { nears++; score += 100; refillBoost(0.5); toast2('아슬아슬! +100', 'volt'); sfx('near'); }
         }
       }
     }
@@ -1425,6 +1471,17 @@ function update(dt) {
   wheelSpin += (py < 0.05 ? speed : speed * 0.3) * dt / 0.36;
   for (const w of player.wheels) w.rotation.x = -wheelSpin;
   const jl = thrust * (0.8 + Math.random() * 0.4) * (1 + Math.min(py, 3) * 0.1);
+  player.boosters.forEach((f, i) => {
+    const core = i % 2 === 1, L = boostAmt * (core ? 1.5 : 2.6) * (0.85 + Math.random() * 0.3);
+    f.visible = boostAmt > 0.03;
+    f.scale.set(core ? 0.08 : 0.17, core ? 0.08 : 0.17, L + 0.001);
+  });
+  if (boostAmt > 0.3 && player.group.visible && !RM) {
+    for (const n of player.boostPorts) {
+      n.getWorldPosition(tmpV);
+      emit(jetFx, tmpV.x + R(-0.05, 0.05), tmpV.y + R(-0.05, 0.05), tmpV.z + 0.3, R(-0.4, 0.4), R(-0.4, 0.4), R(10, 16), R(0.15, 0.28), 1, 0.55, 0.2);
+    }
+  }
   player.jets.forEach((j, i) => { const core = i % 2 === 1, r = core ? 0.08 : 0.18; j.scale.set(r * (0.3 + thrust), jl * (core ? 0.9 : 1.6) + 0.001, r * (0.3 + thrust)); });
   ventMat.opacity = 0.25 + thrust * 0.7;
   if (player.group.visible && state !== 'dying' && !RM) {
@@ -1448,14 +1505,14 @@ function update(dt) {
   updateParticles(sparks, dt, speed * 0.5);
   updateParticles(smoke, dt, speed * 0.6, true);
 
-  const lineK = RM ? 0 : clamp((speed - 45) / 40, 0, 1) * 0.3;
+  const lineK = RM ? 0 : clamp((speed - 45) / 40, 0, 1) * 0.3 + boostAmt * 0.4;
   lineMat.opacity = lineK;
   if (lineK > 0.01) {
     for (let i = 0; i < LINES; i++) {
       const l = lineData[i];
       l.z += speed * 1.3 * dt;
       if (l.z > 10) resetLine(l, true);
-      const len = l.len * (speed / 50);
+      const len = l.len * (speed / 50) * (1 + boostAmt);
       linePos.set([camera.position.x + l.x, camera.position.y + l.y, l.z, camera.position.x + l.x, camera.position.y + l.y, l.z - len], i * 6);
     }
     lineGeo.attributes.position.needsUpdate = true;
@@ -1468,7 +1525,7 @@ function update(dt) {
 
 const look = new THREE.Vector3();
 function updateCamera(dt) {
-  if (Math.abs(camera.fov - baseFov) > 0.01) { camera.fov = damp(camera.fov, baseFov + clamp((speed - 40) / 40, 0, 1) * 6, 3, dt); camera.updateProjectionMatrix(); }
+  if (Math.abs(camera.fov - baseFov) > 0.01) { camera.fov = damp(camera.fov, baseFov + clamp((speed - 40) / 40, 0, 1) * 6 + boostAmt * 8, 3, dt); camera.updateProjectionMatrix(); }
   if (state === 'play' && countdown > 0) {
     const k = ease(clamp(introT / 2.9, 0, 1));
     const a = Math.PI * (1 - k) + 0.35 * Math.sin(k * Math.PI), Rr = lerp(7, camBack, k);
@@ -1480,7 +1537,7 @@ function updateCamera(dt) {
     const cy = Math.max(py, state === 'dying' ? 0 : py) * 0.7 + camUp;
     camera.position.x = damp(camera.position.x, px * 0.6, 5, dt);
     camera.position.y = damp(camera.position.y, cy, 4, dt);
-    camera.position.z = damp(camera.position.z, camBack, 4, dt);
+    camera.position.z = damp(camera.position.z, camBack + boostAmt * 1.2, 4, dt);
     look.set(px * 0.8, py * 0.75 + 1.0, -14);
     camera.lookAt(look);
     camera.rotateZ(bank * 0.15);
@@ -1504,6 +1561,11 @@ function hud() {
   const a = (clamp(py / PY_MAX, 0, 1) * 100).toFixed(1) + '%';
   if (last.alt !== a) { last.alt = a; altMark.style.bottom = a; altTxt.style.bottom = a; altTxt.textContent = py.toFixed(1) + ' m'; }
   thrustBtn.classList.toggle('on', state === 'play' && inThrust());
+  const bp = boostT > 0 ? (boostT / BOOST_DUR).toFixed(2) : (1 - boostCD / BOOST_CD).toFixed(2);
+  if (last.bp !== bp) { last.bp = bp; boostBtn.style.setProperty('--p', bp); }
+  boostBtn.classList.toggle('active', boostT > 0);
+  boostBtn.classList.toggle('ready', boostT <= 0 && boostCD <= 0);
+  elSpd.style.color = boostAmt > 0.3 ? '#ffb15c' : '';
   flipBtn.classList.toggle('ready', state === 'play' && countdown <= 0 && py >= 1.6 && flipT < 0);
 }
 
