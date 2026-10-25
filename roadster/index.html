@@ -185,6 +185,10 @@
   .stats dd { margin: 0; font-family: var(--f-num); font-weight: 700; font-variant-numeric: tabular-nums; }
   .pill { justify-self: start; font-size: 12px; font-weight: 600; color: #1a2233; background: var(--gold); padding: 3px 10px; border-radius: 999px; }
   .stack { display: grid; gap: 10px; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: rgba(255, 255, 255, .06); border: 1px solid var(--line); }
+  .seg button { height: 40px; border: 0; border-radius: 10px; background: transparent; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .seg button svg { width: 16px; height: 16px; fill: currentColor; }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: #1a2233; }
 
   @media (max-height: 520px) and (orientation: landscape) {
     .card.start { width: min(780px, 100%); grid-template-columns: 1fr 1fr; gap: 22px; }
@@ -260,6 +264,7 @@
           <li><span class="chip gold">플립</span>공중에서 누르면 공중제비 +300점. 착지 전에 끝내야 해요.</li>
           <li><span class="chip red">♥ ×3</span>세 번 부딪히면 끝나요.</li>
         </ul>
+        <div class="seg" role="group" aria-label="시간대"><button data-mode="day" aria-pressed="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M11 1h2v4h-2zM11 19h2v4h-2zM1 11h4v2H1zM19 11h4v2h-4zM4.2 5.6l1.4-1.4 2.8 2.8-1.4 1.4zM15.6 17l1.4-1.4 2.8 2.8-1.4 1.4zM4.2 18.4 7 15.6 8.4 17l-2.8 2.8zM15.6 7 18.4 4.2l1.4 1.4L17 8.4z"/></svg>낮 고속도로</button><button data-mode="night" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z"/></svg>밤 고속도로</button></div>
         <div class="row">
           <button class="btn primary" id="startBtn">출발</button>
           <button class="btn" id="soundBtn" aria-pressed="true">소리 켬</button>
@@ -275,6 +280,7 @@
       <h2>일시정지</h2>
       <div class="stack">
         <button class="btn primary" id="resumeBtn">계속 달리기</button>
+        <div class="seg" role="group" aria-label="시간대"><button data-mode="day" aria-pressed="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M11 1h2v4h-2zM11 19h2v4h-2zM1 11h4v2H1zM19 11h4v2h-4zM4.2 5.6l1.4-1.4 2.8 2.8-1.4 1.4zM15.6 17l1.4-1.4 2.8 2.8-1.4 1.4zM4.2 18.4 7 15.6 8.4 17l-2.8 2.8zM15.6 7 18.4 4.2l1.4 1.4L17 8.4z"/></svg>낮 고속도로</button><button data-mode="night" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z"/></svg>밤 고속도로</button></div>
         <div class="row" style="grid-template-columns:1fr 1fr">
           <button class="btn" id="quitBtn">처음 화면</button>
           <button class="btn" id="soundBtn2" aria-pressed="true">소리 켬</button>
@@ -483,18 +489,24 @@ const skyMat = new THREE.ShaderMaterial({
   uniforms: {
     top: { value: new THREE.Color(0x2f6fc4) }, horizon: { value: new THREE.Color(0xd7e6f0) },
     ground: { value: new THREE.Color(0x9fb3a0) }, sunDir: { value: SUN_DIR },
+    disk: { value: new THREE.Color(0xfffcf0) }, glow: { value: 1 }, stars: { value: 0 },
   },
   side: THREE.BackSide, depthWrite: false,
   vertexShader: 'varying vec3 vDir; void main(){ vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
   fragmentShader: [
-    'uniform vec3 top; uniform vec3 horizon; uniform vec3 ground; uniform vec3 sunDir; varying vec3 vDir;',
+    'uniform vec3 top; uniform vec3 horizon; uniform vec3 ground; uniform vec3 sunDir; uniform vec3 disk; uniform float glow; uniform float stars; varying vec3 vDir;',
     'void main(){',
     '  vec3 d = normalize(vDir); float h = d.y; vec3 c;',
     '  if (h > 0.0) c = mix(horizon, top, pow(smoothstep(0.0, 0.7, h), 0.7));',
     '  else c = mix(horizon, ground, smoothstep(0.0, 0.08, -h));',
     '  float s = max(dot(d, sunDir), 0.0);',
-    '  c += vec3(1.0, 0.9, 0.7) * pow(s, 8.0) * 0.25 + vec3(1.0, 0.95, 0.85) * pow(s, 120.0) * 0.6;',
-    '  c = mix(c, vec3(1.0, 0.99, 0.94), smoothstep(0.9990, 0.9995, s));',
+    '  c += disk * (pow(s, 8.0) * 0.25 + pow(s, 120.0) * 0.6) * glow;',
+    '  c = mix(c, disk, smoothstep(0.9990, 0.9995, s));',
+    '  if (stars > 0.0 && h > 0.0) {',
+    '    vec3 q = floor(d * 320.0);',
+    '    float n = fract(sin(dot(q, vec3(12.9898, 78.233, 37.719))) * 43758.5453);',
+    '    c += vec3(0.9, 0.95, 1.0) * step(0.9972, n) * stars * smoothstep(0.03, 0.3, h) * (0.4 + 0.6 * fract(n * 91.0));',
+    '  }',
     '  gl_FragColor = vec4(c, 1.0);',
     '}',
   ].join('\n'),
@@ -502,7 +514,7 @@ const skyMat = new THREE.ShaderMaterial({
 const sky = new THREE.Mesh(new THREE.SphereGeometry(1100, 32, 16), skyMat);
 sky.renderOrder = -2; scene.add(sky);
 
-scene.add(new THREE.HemisphereLight(0xdcebff, 0x5d6b45, 0.85));
+const hemi = new THREE.HemisphereLight(0xdcebff, 0x5d6b45, 0.85); scene.add(hemi);
 const sunLight = new THREE.DirectionalLight(0xfff0d8, 1.05); sunLight.position.copy(SUN_DIR).multiplyScalar(100); scene.add(sunLight);
 const fillLight = new THREE.DirectionalLight(0xc8dcff, 0.55); fillLight.position.set(0.4, 0.8, 1); scene.add(fillLight);
 
@@ -517,11 +529,11 @@ const grass = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.Mesh
 grass.rotation.x = -Math.PI / 2; grass.position.set(0, -0.03, -500); scene.add(grass);
 
 const roadTex = roadTexture();
-const road = new THREE.Mesh(new THREE.PlaneGeometry(40, 1000), new THREE.MeshLambertMaterial({ map: roadTex }));
+const road = new THREE.Mesh(new THREE.PlaneGeometry(40, 1000), new THREE.MeshLambertMaterial({ map: roadTex, emissiveMap: roadTex, emissive: 0x000000 }));
 road.rotation.x = -Math.PI / 2; road.position.set(-8, 0, -480); scene.add(road);
 
 const railTex = railTexture();
-const rail = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1), new THREE.MeshLambertMaterial({ map: railTex, alphaTest: 0.5, side: THREE.DoubleSide }));
+const rail = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1), new THREE.MeshLambertMaterial({ map: railTex, emissiveMap: railTex, emissive: 0x000000, alphaTest: 0.5, side: THREE.DoubleSide }));
 rail.rotation.y = -Math.PI / 2; rail.position.set(9.95, 0.5, -480); scene.add(rail);
 const railFar = rail.clone(); railFar.position.x = -27.9; scene.add(railFar);
 const concreteMat = new THREE.MeshLambertMaterial({ color: 0xc9c8c0 });
@@ -538,6 +550,7 @@ for (let i = 0; i < 16; i++) {
 }
 
 // ---------- roadside: trees and lamps (instanced) ----------
+let isNight = false;
 const dummy = new THREE.Object3D();
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 const TREE_N = 120;
@@ -567,8 +580,11 @@ const LAMP_N = 28, LAMP_GAP = 42;
 const lampMat = new THREE.MeshLambertMaterial({ color: 0x9aa1aa });
 const poleIM = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.11, 0.16, 10, 6).translate(0, 5, 0), lampMat, LAMP_N);
 const armIM = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.12, 0.14), lampMat, LAMP_N);
-const headIM = new THREE.InstancedMesh(new THREE.BoxGeometry(0.75, 0.16, 0.34), new THREE.MeshLambertMaterial({ color: 0xe8ebef }), LAMP_N * 2);
-for (const im of [poleIM, armIM, headIM]) { im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.frustumCulled = false; scene.add(im); }
+const lampHeadMat = new THREE.MeshLambertMaterial({ color: 0xe8ebef });
+const headIM = new THREE.InstancedMesh(new THREE.BoxGeometry(0.75, 0.16, 0.34), lampHeadMat, LAMP_N * 2);
+const poolIM = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: GLOW, color: 0xffb866, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false }), LAMP_N * 2);
+const haloIM = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: GLOW, color: 0xffd9a0, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, side: THREE.DoubleSide }), LAMP_N * 2);
+for (const im of [poleIM, armIM, headIM, poolIM, haloIM]) { im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.frustumCulled = false; scene.add(im); }
 const lamps = [];
 for (let i = 0; i < LAMP_N; i++) lamps.push({ median: i % 2 === 1, z: -Math.floor(i / 2) * LAMP_GAP - (i % 2 ? LAMP_GAP / 2 : 0) });
 function updateLamps(travel) {
@@ -580,11 +596,18 @@ function updateLamps(travel) {
     dummy.position.set(x, 0, l.z); dummy.updateMatrix(); poleIM.setMatrixAt(i, dummy.matrix);
     dummy.position.set(l.median ? x : x - 1.1, 9.9, l.z); dummy.scale.set(l.median ? 4.4 : 2.2, 1, 1); dummy.updateMatrix(); armIM.setMatrixAt(i, dummy.matrix);
     dummy.scale.set(1, 1, 1);
-    dummy.position.set(l.median ? x + 2.0 : x - 2.0, 9.82, l.z); dummy.updateMatrix(); headIM.setMatrixAt(i * 2, dummy.matrix);
-    if (l.median) { dummy.position.set(x - 2.0, 9.82, l.z); dummy.updateMatrix(); headIM.setMatrixAt(i * 2 + 1, dummy.matrix); }
-    else headIM.setMatrixAt(i * 2 + 1, ZERO);
+    const hx = [l.median ? x + 2.0 : x - 2.0, l.median ? x - 2.0 : null];
+    for (let k = 0; k < 2; k++) {
+      const j = i * 2 + k;
+      if (hx[k] === null) { headIM.setMatrixAt(j, ZERO); poolIM.setMatrixAt(j, ZERO); haloIM.setMatrixAt(j, ZERO); continue; }
+      dummy.scale.set(1, 1, 1); dummy.position.set(hx[k], 9.82, l.z); dummy.updateMatrix(); headIM.setMatrixAt(j, dummy.matrix);
+      if (!isNight) continue;
+      dummy.scale.set(3.2, 3.2, 1); dummy.position.set(hx[k], 9.7, l.z + 0.2); dummy.updateMatrix(); haloIM.setMatrixAt(j, dummy.matrix);
+      dummy.scale.set(13, 1, 17); dummy.position.set(hx[k], 0.07, l.z); dummy.updateMatrix(); poolIM.setMatrixAt(j, dummy.matrix);
+    }
   }
   poleIM.instanceMatrix.needsUpdate = armIM.instanceMatrix.needsUpdate = headIM.instanceMatrix.needsUpdate = true;
+  if (isNight) poolIM.instanceMatrix.needsUpdate = haloIM.instanceMatrix.needsUpdate = true;
 }
 
 // ---------- shared materials ----------
@@ -627,6 +650,8 @@ const coverGeo = new THREE.CircleGeometry(0.29, 24);
 const ventGeo = new THREE.CircleGeometry(0.2, 18).rotateX(Math.PI / 2);
 const jetGeo = new THREE.ConeGeometry(1, 1, 14, 1, true).rotateX(Math.PI).translate(0, -0.5, 0);
 
+const playerTailGlow = new THREE.SpriteMaterial({ map: GLOW, color: 0xff3048, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.55 });
+const playerHeadGlow = new THREE.SpriteMaterial({ map: GLOW, color: 0xffffff, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.7 });
 function buildRoadster() {
   const g = new THREE.Group(), body = new THREE.Group();
   g.add(body);
@@ -636,9 +661,9 @@ function buildRoadster() {
   add(body, new THREE.BoxGeometry(1.86, 0.035, 0.05), whiteLightMat, 0, 0.47, -2.33);
   add(body, new THREE.BoxGeometry(1.92, 0.05, 0.05), tailMat, 0, 0.62, 2.31);
   add(body, new THREE.BoxGeometry(1.3, 0.16, 0.3), blackMat, 0, 0.36, 2.18);
-  const tailGlow = new THREE.SpriteMaterial({ map: GLOW, color: 0xff3048, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.55 });
+  const tailGlow = playerTailGlow;
   for (const sx of [-0.7, 0, 0.7]) { const s = new THREE.Sprite(tailGlow); s.scale.set(1.1, 0.4, 1); s.position.set(sx, 0.62, 2.38); body.add(s); }
-  const headGlow = new THREE.SpriteMaterial({ map: GLOW, color: 0xffffff, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.7 });
+  const headGlow = playerHeadGlow;
   for (const sx of [-0.7, 0, 0.7]) { const s = new THREE.Sprite(headGlow); s.scale.set(1.2, 0.35, 1); s.position.set(sx, 0.47, -2.4); body.add(s); }
   const wheels = [];
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
@@ -668,6 +693,7 @@ const bigWheelGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.36, 14).rotateZ(Math.
 const tailBoxGeo = new THREE.BoxGeometry(0.46, 0.12, 0.06);
 const brakeMat = new THREE.SpriteMaterial({ map: GLOW, color: 0xff2a3c, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.85, fog: false });
 const blinkMat = new THREE.SpriteMaterial({ map: GLOW, color: 0xffa21e, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, fog: false });
+const tailNightMat = new THREE.SpriteMaterial({ map: GLOW, color: 0xff2a3c, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0, fog: false });
 const headLampMat = new THREE.SpriteMaterial({ map: GLOW, color: 0xfff6e0, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.9, fog: false });
 const CAR_COLORS = [0xf1f1ee, 0xf1f1ee, 0x1f2126, 0x9aa1ab, 0x5d636c, 0x24365c, 0x7c2230, 0xd9d2c1, 0x2f4f3f];
 const colorMats = new Map();
@@ -679,6 +705,7 @@ function lightsRear(g, x, y, z) {
   const brakes = [], blinks = [];
   for (const sx of [-1, 1]) {
     const b = new THREE.Sprite(brakeMat); b.scale.set(1.2, 0.6, 1); b.position.set(sx * x, y, z + 0.1); b.visible = false; g.add(b); brakes.push(b);
+    const tn = new THREE.Sprite(tailNightMat); tn.scale.set(0.9, 0.45, 1); tn.position.set(sx * x, y, z + 0.08); g.add(tn);
     const k = new THREE.Sprite(blinkMat); k.scale.set(0.9, 0.9, 1); k.position.set(sx * (x + 0.2), y, z + 0.1); k.visible = false; g.add(k); blinks.push(k);
   }
   return { brakes, blinks };
@@ -744,6 +771,10 @@ const player = buildRoadster();
 scene.add(player.group);
 const playerShadow = new THREE.Mesh(blobGeo, new THREE.MeshBasicMaterial({ map: BLOB, transparent: true, depthWrite: false }));
 playerShadow.scale.set(3, 1, 5.6); playerShadow.position.y = 0.05; scene.add(playerShadow);
+const headSpot = new THREE.SpotLight(0xfff1d6, 0, 80, 0.5, 0.55, 1);
+scene.add(headSpot); scene.add(headSpot.target);
+const beamMat = new THREE.MeshBasicMaterial({ map: GLOW, color: 0xfff0d0, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+const beam = new THREE.Mesh(blobGeo, beamMat); beam.scale.set(7, 1, 30); beam.position.set(0, 0.06, -16); scene.add(beam);
 
 // ---------- particles ----------
 function makeParticles(n, size, blending, opacity) {
@@ -795,6 +826,40 @@ function resetLine(l, far) {
   l.x = x; l.y = y; l.z = far ? R(-140, -20) : R(-140, 0); l.len = R(3, 9);
 }
 for (let i = 0; i < LINES; i++) { const l = {}; resetLine(l, false); lineData.push(l); }
+
+// ---------- day / night ----------
+const THEMES = {
+  day: { top: 0x2f6fc4, horizon: 0xd7e6f0, ground: 0x9fb3a0, disk: 0xfffcf0, glow: 1, stars: 0, sun: [-0.45, 0.32, -1],
+    fog: 0xc9dbe8, near: 60, far: 440, hs: 0xdcebff, hg: 0x5d6b45, hi: 0.85, sc: 0xfff0d8, si: 1.05, fi: 0.55,
+    mount: 0xffffff, cloud: 0xffffff, cloudOp: 0.85, em: 0x000000, meta: '#5f8fc4' },
+  night: { top: 0x03060f, horizon: 0x18233d, ground: 0x06080d, disk: 0xdfe8ff, glow: 0.35, stars: 1, sun: [0.4, 0.3, -1],
+    fog: 0x0e1525, near: 30, far: 360, hs: 0x4a5c8c, hg: 0x090b10, hi: 0.4, sc: 0xa9bcff, si: 0.3, fi: 0.18,
+    mount: 0x1c2539, cloud: 0x34405c, cloudOp: 0.4, em: 0x262626, meta: '#0e1525' },
+};
+function applyTheme(night) {
+  isNight = night;
+  const t = night ? THEMES.night : THEMES.day, u = skyMat.uniforms;
+  u.top.value.setHex(t.top); u.horizon.value.setHex(t.horizon); u.ground.value.setHex(t.ground); u.disk.value.setHex(t.disk);
+  u.glow.value = t.glow; u.stars.value = t.stars; SUN_DIR.set(t.sun[0], t.sun[1], t.sun[2]).normalize();
+  scene.fog.color.setHex(t.fog); scene.fog.near = t.near; scene.fog.far = t.far;
+  hemi.color.setHex(t.hs); hemi.groundColor.setHex(t.hg); hemi.intensity = t.hi;
+  sunLight.color.setHex(t.sc); sunLight.intensity = t.si; sunLight.position.copy(SUN_DIR).multiplyScalar(100);
+  fillLight.intensity = t.fi;
+  mountains.material.color.setHex(t.mount);
+  cloudMat.color.setHex(t.cloud); cloudMat.opacity = t.cloudOp;
+  road.material.emissive.setHex(t.em); rail.material.emissive.setHex(t.em);
+  lampHeadMat.emissive.setHex(night ? 0xffe2b0 : 0x000000);
+  poolIM.visible = haloIM.visible = night;
+  headSpot.intensity = night ? 3 : 0; beam.visible = night;
+  tailNightMat.opacity = night ? 0.75 : 0;
+  playerTailGlow.opacity = night ? 0.9 : 0.55; playerHeadGlow.opacity = night ? 1 : 0.7;
+  headLampMat.opacity = night ? 1 : 0.9;
+  const meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.setAttribute('content', t.meta);
+  document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.mode === 'night') === night)));
+  updateLamps(0);
+  needsRender = true;
+  try { localStorage.setItem('roadster-hwy-theme', night ? 'night' : 'day'); } catch (e) {}
+}
 
 // ---------- state ----------
 let W = 1, H = 1, baseFov = 60, camBack = 8.8, camUp = 2.9;
@@ -1175,6 +1240,10 @@ function update(dt) {
   playerShadow.position.x = px;
   const sh = clamp(1 - py / 11, 0.25, 1);
   playerShadow.scale.set(3 * (2 - sh), 1, 5.6 * (2 - sh)); playerShadow.material.opacity = sh;
+  if (isNight) {
+    headSpot.position.set(px, py + 0.6, -2.4); headSpot.target.position.set(px, Math.max(0, py * 0.4), -34);
+    beam.position.x = px; beamMat.opacity = player.group.visible ? 0.26 * clamp(1 - py / 6, 0, 1) : 0;
+  }
 
   // ----- speed -----
   const d = difficulty();
@@ -1306,7 +1375,8 @@ function update(dt) {
         const k = (1 - py / 4) * thrust;
         for (let j = 0; j < 3; j++) if (Math.random() < k) {
           const a = R(0, TAU);
-          emit(dust, px + Math.cos(a) * 1.2, 0.2, Math.sin(a) * 1.6, Math.cos(a) * R(5, 10), R(0.5, 2), Math.sin(a) * R(3, 7), R(0.4, 0.8), 0.78, 0.76, 0.72);
+          const dc = isNight ? 0.3 : 0.78;
+          emit(dust, px + Math.cos(a) * 1.2, 0.2, Math.sin(a) * 1.6, Math.cos(a) * R(5, 10), R(0.5, 2), Math.sin(a) * R(3, 7), R(0.4, 0.8), dc, dc * 0.97, dc * 0.92);
         }
       }
     }
@@ -1403,12 +1473,18 @@ $('resumeBtn').addEventListener('click', resumeGame);
 $('pauseBtn').addEventListener('click', () => { if (state === 'play') pauseGame(); else if (state === 'paused') resumeGame(); });
 $('soundBtn').addEventListener('click', () => setSound(!soundOn));
 $('soundBtn2').addEventListener('click', () => setSound(!soundOn));
+document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => applyTheme(b.dataset.mode === 'night')));
 
 // ---------- boot ----------
 resize();
 setSound(soundOn);
 $('bestMenu').textContent = fmt(best);
-updateTrees(0); updateLamps(0);
+const hashMode = () => /night/i.test(location.hash) ? true : /day/i.test(location.hash) ? false : null;
+let startNight = hashMode();
+if (startNight === null) { try { startNight = localStorage.getItem('roadster-hwy-theme') === 'night'; } catch (e) { startNight = false; } }
+applyTheme(startNight);
+window.addEventListener('hashchange', () => { const m = hashMode(); if (m !== null) applyTheme(m); });
+updateTrees(0);
 for (let i = 0; i < 6; i++) spawnOpposite();
 opp.forEach((o, i) => { o.g.position.z = -60 - i * 60; });
 startGame();
